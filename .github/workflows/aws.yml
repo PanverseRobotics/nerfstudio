@@ -1,0 +1,72 @@
+# This workflow will build and push a new container image to Amazon ECR,
+# and then will deploy a new task definition to Amazon ECS, when there is a push to the "main" branch.
+#
+# To use this workflow, you will need to complete the following set-up steps:
+#
+# 1. Create an ECR repository to store your images.
+#    For example: `aws ecr create-repository --repository-name my-ecr-repo --region us-east-2`.
+#    Replace the value of the `ECR_REPOSITORY` environment variable in the workflow below with your repository's name.
+#    Replace the value of the `AWS_REGION` environment variable in the workflow below with your repository's region.
+#
+# 2. Store an IAM user access key in GitHub Actions secrets named `AWS_ECR_WRITE_ACCESS_KEY` and `AWS_ECR_WRITE_SECRET_KEY`.
+#    See the documentation for each action used below for the recommended IAM policies for this IAM user,
+#    and best practices on handling the access key credentials.
+#
+# 3. Store a PAT for a GitHub Actions service account with the `repo` scope in the GitHub repository secrets as `PANVERSEROBOT_PAT`.
+
+name: Push to Amazon ECR
+
+on:
+  push:
+    branches: [ "main" ]
+
+# uncomment to cancel runs if you recommit before it's done creating an image
+#concurrency: 
+  #group: ${{ github.ref }}
+  #cancel-in-progress: true
+
+env:
+  AWS_REGION: us-west-2                   # set this to your preferred AWS region, e.g. us-west-1
+  ECR_REPOSITORY: nerfstudiofork           # set this to your Amazon ECR repository name
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.PANVERSEROBOT_PAT }}
+        submodules: recursive
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ECR_WRITE_ACCESS_KEY }}
+        aws-secret-access-key: ${{ secrets.AWS_ECR_WRITE_SECRET_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        # Build a docker container and
+        # push it to ECR so that it can
+        # be deployed to ECS.
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+
