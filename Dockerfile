@@ -172,5 +172,8 @@ WORKDIR /workspace
 # Install nerfstudio cli auto completion
 #RUN ns-install-cli --mode install
 
+# install gsplat
+RUN python3.10 -m pip install git+https://github.com/nerfstudio-project/gsplat.git
+
 # Bash as default entrypoint.
 CMD /bin/bash -l
