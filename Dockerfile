@@ -173,7 +173,8 @@ WORKDIR /workspace
 #RUN ns-install-cli --mode install
 
 # install gsplat
-RUN python3.10 -m pip install git+https://github.com/nerfstudio-project/gsplat.git
+#RUN python3.10 -m pip install git+https://github.com/nerfstudio-project/gsplat.git
+RUN python3.10 -m pip install gsplat
 
 # Bash as default entrypoint.
 CMD /bin/bash -l
